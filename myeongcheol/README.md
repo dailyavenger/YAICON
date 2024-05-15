@@ -1,1 +1,3 @@
-Tensorflow downgrade needed.
+Tensorflow downgrade needed. -> impossible
+
+pip install eigsh
