@@ -1,32 +1,28 @@
-import numpy as np
 import tensorflow as tf
-
-from utils import layers
 from models.base_gattn import BaseGAttN
+from utils.layers import AttnHead
 
-class GAT(BaseGAttN):
-    def inference(inputs, nb_classes, nb_nodes, training, attn_drop, ffd_drop,
-            bias_mat, hid_units, n_heads, activation=tf.nn.elu, residual=False):
-        attns = []
-        for _ in range(n_heads[0]):
-            attns.append(layers.attn_head(inputs, bias_mat=bias_mat,
-                out_sz=hid_units[0], activation=activation,
-                in_drop=ffd_drop, coef_drop=attn_drop, residual=False))
-        h_1 = tf.concat(attns, axis=-1)
-        for i in range(1, len(hid_units)):
-            h_old = h_1
-            attns = []
-            for _ in range(n_heads[i]):
-                attns.append(layers.attn_head(h_1, bias_mat=bias_mat,
-                    out_sz=hid_units[i], activation=activation,
-                    in_drop=ffd_drop, coef_drop=attn_drop, residual=residual))
-                
-            h_1 = tf.concat(attns, axis=-1)
-        out = []
-        for i in range(n_heads[-1]):
-            out.append(layers.attn_head(h_1, bias_mat=bias_mat,
-                out_sz=nb_classes, activation=lambda x: x,
-                in_drop=ffd_drop, coef_drop=attn_drop, residual=False))
-        logits = tf.add_n(out) / n_heads[-1]
-    
+class GAT(BaseGAttN, tf.keras.Model):
+    def __init__(self, nb_nodes, nb_features, nb_classes, hid_units, n_heads, residual, nonlinearity):
+        super(GAT, self).__init__()
+        self.attn_heads = [AttnHead(hid_units[0], nonlinearity, 0.6, 0.6, residual) for _ in range(n_heads[0])]
+        self.out_layer = AttnHead(nb_classes, lambda x: x, 0.6, 0.6, residual)
+        self.n_heads = n_heads
+        self.nb_classes = nb_classes
+        self.hid_units = hid_units
+        self.residual = residual
+        self.nonlinearity = nonlinearity
+
+    def call(self, inputs, training=False):
+        x, bias_mat = inputs
+
+        attn_outputs = [attn(x, bias_mat, training=training) for attn in self.attn_heads]
+        h_1 = tf.concat(attn_outputs, axis=-1)
+
+        for i in range(1, len(self.hid_units)):
+            attn_outputs = [attn(h_1, bias_mat, training=training) for attn in self.attn_heads]
+            h_1 = tf.concat(attn_outputs, axis=-1)
+
+        out = [self.out_layer(h_1, bias_mat, training=training) for _ in range(self.n_heads[-1])]
+        logits = tf.add_n(out) / self.n_heads[-1]
         return logits
