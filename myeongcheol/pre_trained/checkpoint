@@ -1,0 +1,2 @@
+model_checkpoint_path: "gat_encoder.ckpt"
+all_model_checkpoint_paths: "gat_encoder.ckpt"

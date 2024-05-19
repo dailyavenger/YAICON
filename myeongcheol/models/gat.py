@@ -26,3 +26,15 @@ class GAT(BaseGAttN, tf.keras.Model):
         out = [self.out_layer(h_1, bias_mat, training=training) for _ in range(self.n_heads[-1])]
         logits = tf.add_n(out) / self.n_heads[-1]
         return logits
+
+    def get_node_embeddings(self, inputs, training=False):
+        x, bias_mat = inputs
+
+        attn_outputs = [attn(x, bias_mat, training=training) for attn in self.attn_heads]
+        h_1 = tf.concat(attn_outputs, axis=-1)
+
+        for i in range(1, len(self.hid_units)):
+            attn_outputs = [attn(h_1, bias_mat, training=training) for attn in self.attn_heads]
+            h_1 = tf.concat(attn_outputs, axis=-1)
+
+        return h_1
