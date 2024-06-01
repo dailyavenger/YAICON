@@ -10,7 +10,7 @@ model:
 #  freeze_vit: True
 
 json:
-  path: graph_embeddings.json
+  path: "data/graph_embeddings.json"
 #datasets:
 #  coco_caption:
 #    vis_processor:
