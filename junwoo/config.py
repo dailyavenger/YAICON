@@ -28,6 +28,7 @@ class Config:
 
         runner_config = self.build_runner_config(config)
         model_config = self.build_model_config(config, **user_config)
+        json_config = self.build_json_config(config)
         # dataset_config = self.build_dataset_config(config)
 
         # Validate the user-provided runner configuration
@@ -37,7 +38,7 @@ class Config:
 
         # Override the default configuration with user options.
         self.config = OmegaConf.merge(
-            runner_config, model_config, user_config
+            runner_config, model_config, user_config, json_config
         )
 
     def _validate_runner_config(self, runner_config):
@@ -83,6 +84,40 @@ class Config:
     @staticmethod
     def build_runner_config(config):
         return {"run": config.run}
+    
+    @staticmethod
+    def build_json_config(config):
+        get_json = config.get("json", None)
+        if json is None:
+            logging.info("No json configuration found")
+            return None
+        
+        print("Registering json path...")
+        registry.register_json_path("json", str(get_json.path))
+        json_path = registry.get_json_path("json")
+        print(f"Retrieved JSON path: {json_path}")
+        assert json_path is not None, f"Json '{json_path}' has not been registered."
+        
+#         json_config_path = json_path.default_config_path()
+#         default_json_config = OmegaConf.load(json_config_path)
+        print(f"Loading default JSON config from: {json_path}")
+        with open(json_path, 'r') as file:
+            json_data = json.load(file)
+#         default_json_config = OmegaConf.load(json_path)
+        default_json_config = OmegaConf.create(json_data)
+        
+        
+#         json_config = OmegaConf.create()
+        print("Merging configurations...")
+        json_config = OmegaConf.merge(
+            OmegaConf.create(), 
+            default_json_config,
+            {"json": json},
+        )
+        
+        print("JSON configuration built complete")
+        return json_config
+        
 
     @staticmethod
     def build_dataset_config(config):
@@ -139,6 +174,10 @@ class Config:
     @property
     def model_cfg(self):
         return self.config.model
+    
+    @property
+    def json_cfg(self):
+        return self.config.json
 
     def pretty_print(self):
         logging.info("\n=====  Running Parameters    =====")
