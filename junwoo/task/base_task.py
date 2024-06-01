@@ -33,10 +33,10 @@ class BaseTask:
         return model_cls.from_config(model_config)
 
     def load_data_from_json(self, cfg):
-        json_path = cfg.json_cfg
+        data = cfg.json_cfg
 
-        with open(json_path.path, 'r') as f:
-            data = json.load(f)
+#         with open(json_path.path, 'r') as f:
+#             data = json.load(f)
         embeddings = [torch.tensor(item['embeddings'], dtype=torch.float32) for item in data]
         subgraph_texts = [item['subgraph_text'] for item in data]
         return embeddings, subgraph_texts
